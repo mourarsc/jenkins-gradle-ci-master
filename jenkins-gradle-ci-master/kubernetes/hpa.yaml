@@ -1,0 +1,16 @@
+apiVersion: autoscaling/v2beta1
+kind: ku
+metadata:
+  name: jenkins-gradle-ci-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jenkins-gradle-ci
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 70

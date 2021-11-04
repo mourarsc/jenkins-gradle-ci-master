@@ -1,0 +1,18 @@
+apiVersion: "authentication.istio.io/v1alpha1"
+kind: "Policy"
+metadata:
+  name: "jwt"
+spec:
+  targets:
+  - name: jenkins-gradle-ci
+  origins:
+  - jwt:
+      issuer: "http://35.209.57.177/:8080/auth/realms/master"
+      jwksUri: "http://35.209.57.177/:8080/auth/realms/master/protocol/openid-connect/certs"
+      trigger_rules:
+      - excluded_paths:
+        - exact: /actuator/health
+        - exact: /swagger-ui.html
+        - regex: /webjars/**
+  principalBinding: USE_ORIGIN
+

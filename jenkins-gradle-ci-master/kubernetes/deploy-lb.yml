@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-gradle-ci
+  labels:
+    app: jenkins-gradle-ci
+    service: jenkins-gradle-ci
+spec:
+  ports:
+    - port: 8080
+      name: http
+      targetPort: 8080
+  selector:
+    app: jenkins-gradle-ci
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-gradle-ci-lb
+  labels:
+    app: jenkins-gradle-ci-lb
+    service: jenkins-gradle-ci-lb
+spec:
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+  type: LoadBalancer
+
+  selector:
+    app: jenkins-gradle-ci
+---
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-jenkins-gradle-ci
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-gradle-ci
+  labels:
+    app: jenkins-gradle-ci
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: jenkins-gradle-ci
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: jenkins-gradle-ci
+        version: v1
+    spec:
+      serviceAccountName: sa-jenkins-gradle-ci
+      volumes:
+        - name: persistent-gradle
+          persistentVolumeClaim:
+            claimName: gradle-pv-claim
+      containers:
+        - name: jenkins-gradle-ci
+          image: coffeeandit/jenkins-gradle-ci:1.2.7
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jenkins-gradle-ci-secret
+                  key: password
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "128m"
+            limits:
+              memory: "500Mi"
+              cpu: "500m"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: persistent-gradle
+              mountPath: /mnt/data
+          readinessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5

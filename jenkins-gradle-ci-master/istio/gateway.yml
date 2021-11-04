@@ -1,0 +1,33 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: jenkins-gradle-gateway
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: jenkins-gradle-ci
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - jenkins-gradle-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /actuator/health
+      route:
+        - destination:
+            port:
+              number: 8080
+            host: jenkins-gradle-ci
